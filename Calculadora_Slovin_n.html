@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Amostra (Yamane / Recomendado)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --primary:#2c3e50;
+      --secondary:#3498db;
+      --bg:#f5f7fa;
+      --card:#ffffff;
+      --text:#333;
+      --danger:#c0392b;
+      --okbg:#d4edda;
+      --oktx:#155724;
+      --errbg:#f8d7da;
+      --errtx:#721c24;
+    }
+    body{
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin:0;
+      padding:20px;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+    .container{
+      background:var(--card);
+      max-width:820px;
+      width:100%;
+      padding:28px;
+      border-radius:12px;
+      box-shadow:0 8px 20px rgba(0,0,0,.10);
+    }
+    h1{
+      color:var(--primary);
+      text-align:center;
+      border-bottom:2px solid var(--secondary);
+      padding-bottom:10px;
+      margin:0 0 18px;
+    }
+    .didactic-section{
+      background:#e8f4f8;
+      padding:14px 18px;
+      border-left:5px solid var(--secondary);
+      border-radius:6px;
+      margin-bottom:18px;
+      font-size:.98rem;
+    }
+    .formula-box{
+      font-family: "Courier New", Courier, monospace;
+      font-size:1.05rem;
+      text-align:center;
+      background:#fff;
+      padding:10px 12px;
+      border:1px dashed #bdc3c7;
+      border-radius:8px;
+      margin:12px 0;
+      font-weight:700;
+      color:var(--primary);
+    }
+    fieldset{
+      border:1px solid #e6e6e6;
+      border-radius:10px;
+      padding:12px 14px;
+      margin:0 0 16px;
+    }
+    legend{
+      padding:0 8px;
+      color:var(--primary);
+      font-weight:700;
+    }
+    .mode-row{
+      display:flex;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+    .mode-row label{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:600;
+      color:var(--primary);
+      cursor:pointer;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width:720px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+    .input-group{ margin-bottom:14px; }
+    label{ display:block; font-weight:600; margin-bottom:8px; color:var(--primary); }
+    input[type="number"], select{
+      width:100%;
+      padding:12px;
+      border:1px solid #ccc;
+      border-radius:6px;
+      font-size:1rem;
+      box-sizing:border-box;
+    }
+    input[type="number"]:focus, select:focus{
+      outline:none;
+      border-color:var(--secondary);
+      box-shadow:0 0 5px rgba(52,152,219,.25);
+    }
+    .hint{
+      font-size:.88rem;
+      color:#555;
+      margin-top:6px;
+    }
+    button{
+      width:100%;
+      background:var(--secondary);
+      color:#fff;
+      border:none;
+      padding:14px;
+      font-size:1.05rem;
+      font-weight:800;
+      border-radius:8px;
+      cursor:pointer;
+    }
+    button:hover{ background:#2980b9; }
+    #result-container{
+      margin-top:18px;
+      padding:16px;
+      background:var(--okbg);
+      color:var(--oktx);
+      border:1px solid #c3e6cb;
+      border-radius:10px;
+      text-align:center;
+      display:none;
+    }
+    #result-container.error{
+      background:var(--errbg);
+      color:var(--errtx);
+      border-color:#f5c6cb;
+    }
+    .result-value{
+      font-size:2rem;
+      font-weight:900;
+      display:block;
+      margin-top:8px;
+    }
+    .result-meta{
+      margin-top:10px;
+      font-size:.95rem;
+      opacity:.95;
+    }
+    .chart-container{
+      margin-top:22px;
+      padding-top:18px;
+      border-top:1px solid #eee;
+      display:none;
+    }
+    .hidden{ display:none !important; }
+    .footer-stamp {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px dashed #bdc3c7;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #7f8c8d;
+      line-height: 1.4;
+    }
+    .footer-stamp strong {
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de Amostra</h1>
+
+    <div class="didactic-section" id="didacticBox">
+      <p><strong>Dois modos de cálculo:</strong></p>
+      <p>
+        <strong>Regra de bolso (Yamane, popularmente “Slovin”)</strong>: indicada para
+        <strong>proporções</strong> em <strong>amostragem probabilística</strong>, sob
+        condições padrão frequentemente apresentadas como <strong>95% de confiança</strong> e
+        <strong>p = 0,5</strong> (pior caso). 
+      </p>
+      <div class="formula-box">n = N / (1 + N · e²)</div>
+      <p>
+        <strong>Modo recomendado</strong>: explicita confiança (Z), p, correção para população finita e
+        ajustes de perdas e efeito de desenho.
+      </p>
+      <p class="hint">
+        Observação: em amostras não probabilísticas, “margem de erro” não tem o significado clássico de erro amostral.
+      </p>
+    </div>
+
+    <fieldset>
+      <legend>Modo de cálculo</legend>
+      <div class="mode-row">
+        <label><input type="radio" name="mode" value="yamane" checked> Regra de bolso (Yamane)</label>
+        <label><input type="radio" name="mode" value="recommended"> Modo recomendado</label>
+      </div>
+    </fieldset>
+
+    <div class="grid">
+      <div class="input-group">
+        <label for="population">População (N)</label>
+        <input type="number" id="population" placeholder="Ex: 1000" min="1" />
+      </div>
+
+      <div class="input-group">
+        <label for="error_margin">Margem de erro (e), em %</label>
+        <input type="number" id="error_margin" placeholder="Ex: 5" min="0" step="0.1" />
+        <div class="hint">No modo Yamane, “e” funciona como nível de precisão sob suposições padrão.</div>
+      </div>
+    </div>
+
+    <fieldset id="recommendedBox" class="hidden">
+      <legend>Parâmetros do modo recomendado</legend>
+
+      <div class="grid">
+        <div class="input-group">
+          <label for="confidence">Nível de confiança</label>
+          <select id="confidence">
+            <option value="90">90%</option>
+            <option value="95" selected>95%</option>
+            <option value="99">99%</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="pValue">Proporção esperada (p)</label>
+          <input type="number" id="pValue" min="0" max="1" step="0.01" value="0.50" />
+          <div class="hint">Se você não sabe p, usar 0,50 é o cenário conservador.</div>
+        </div>
+
+        <div class="input-group">
+          <label for="deff">Efeito de desenho (deff)</label>
+          <input type="number" id="deff" min="1" step="0.1" value="1.0" />
+          <div class="hint">Amostragem por conglomerados costuma exigir deff &gt; 1.</div>
+        </div>
+
+        <div class="input-group">
+          <label for="loss">Perdas / não resposta (em %)</label>
+          <input type="number" id="loss" min="0" max="95" step="1" value="0" />
+          <div class="hint">Ex: 10% significa inflar a amostra para compensar quem não responde.</div>
+        </div>
+      </div>
+    </fieldset>
+
+    <button id="calcBtn">Calcular e gerar gráfico</button>
+
+    <div id="result-container">
+      <div id="result-text">Resultado</div>
+      <span class="result-value" id="result-value"></span>
+      <div class="result-meta" id="result-meta"></div>
+    </div>
+
+    <div class="chart-container" id="chart-wrapper">
+      <canvas id="chart"></canvas>
+    </div>
+
+    <div class="footer-stamp">
+      🎓 <strong>Uso Didático:</strong> Material da disciplina de Estatística Aplicada à Química.<br>
+      Desenvolvido com auxílio de IA e revisado por humano.
+    </div>
+    
+  </div>
+
+  <script>
+    let chartRef = null;
+
+    function stripOaiCiteArtifacts(text) {
+      if (!text) return text;
+      return text
+        .replace(/:contentReference\[oaicite:\d+\]\{index=\d+\}/g, "")
+        .replace(/:contentReference\[oaicite:\d+\]/g, "");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const box = document.getElementById("didacticBox");
+      box.innerHTML = stripOaiCiteArtifacts(box.innerHTML);
+
+      document.querySelectorAll('input[name="mode"]').forEach(r => {
+        r.addEventListener("change", syncModeUI);
+      });
+      document.getElementById("calcBtn").addEventListener("click", calculate);
+
+      syncModeUI();
+    });
+
+    function syncModeUI(){
+      const mode = getMode();
+      document.getElementById("recommendedBox").classList.toggle("hidden", mode !== "recommended");
+    }
+
+    function getMode(){
+      return document.querySelector('input[name="mode"]:checked').value;
+    }
+
+    function zFromConfidence(conf){
+      // Valores usuais (normal padrão)
+      if (conf === 90) return 1.645;
+      if (conf === 95) return 1.96;
+      if (conf === 99) return 2.576;
+      return 1.96;
+    }
+
+    function showError(msg){
+      const c = document.getElementById("result-container");
+      document.getElementById("result-text").innerText = "Erro:";
+      const v = document.getElementById("result-value");
+      v.innerText = msg;
+      v.style.fontSize = "1.15rem";
+      document.getElementById("result-meta").innerText = "";
+      c.classList.add("error");
+      c.style.display = "block";
+      document.getElementById("chart-wrapper").style.display = "none";
+    }
+
+    function showResult(n, meta){
+      const c = document.getElementById("result-container");
+      c.classList.remove("error");
+      c.style.display = "block";
+      const v = document.getElementById("result-value");
+      v.style.fontSize = "2rem";
+      v.innerText = `${n} unidades`;
+      document.getElementById("result-text").innerText = "Tamanho de amostra calculado:";
+      document.getElementById("result-meta").innerText = meta || "";
+    }
+
+    function calculate(){
+      const N = parseFloat(document.getElementById("population").value);
+      const ePct = parseFloat(document.getElementById("error_margin").value);
+
+      if (isNaN(N) || N <= 0) return showError("Informe uma população válida (N > 0).");
+      if (isNaN(ePct) || ePct < 0 || ePct >= 100) return showError("Informe uma margem de erro entre 0 e 100%.");
+
+      const mode = getMode();
+      const e = ePct / 100;
+
+      if (mode === "yamane"){
+        const n = Math.ceil(N / (1 + N * Math.pow(e, 2)));
+        showResult(n, `Modo: Regra de bolso (Yamane). Parâmetros: N=${N}, e=${ePct}%.`);
+        generateChartYamane(N, ePct, n);
+        return;
+      }
+
+      // Modo recomendado (proporções)
+      const conf = parseInt(document.getElementById("confidence").value, 10);
+      const z = zFromConfidence(conf);
+
+      const p = parseFloat(document.getElementById("pValue").value);
+      if (isNaN(p) || p < 0 || p > 1) return showError("p deve estar entre 0 e 1.");
+
+      const deff = parseFloat(document.getElementById("deff").value);
+      if (isNaN(deff) || deff < 1) return showError("deff deve ser ≥ 1.");
+
+      const lossPct = parseFloat(document.getElementById("loss").value);
+      if (isNaN(lossPct) || lossPct < 0 || lossPct >= 100) return showError("Perdas devem estar entre 0 e 99%.");
+
+      // Cochran (proporções) + correção finita
+      const n0 = (Math.pow(z, 2) * p * (1 - p)) / Math.pow(e, 2);
+      const nFpc = n0 / (1 + ((n0 - 1) / N));
+
+      // Ajustes: efeito de desenho e perdas
+      const loss = lossPct / 100;
+      const nAdj = Math.ceil((nFpc * deff) / (1 - loss));
+
+      const meta = `Modo: Recomendado. Z≈${z}, p=${p.toFixed(2)}, e=${ePct}%, deff=${deff.toFixed(2)}, perdas=${lossPct}%.`;
+      showResult(nAdj, meta);
+      generateChartRecommended(N, conf, p, deff, lossPct, ePct, nAdj);
+    }
+
+    function generateChartYamane(N, currentEPct, currentN){
+      const wrapper = document.getElementById("chart-wrapper");
+      wrapper.style.display = "block";
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chartRef) chartRef.destroy();
+
+      let errors = [1,2,3,4,5,7,10,15,20];
+      if (!errors.includes(currentEPct)) { errors.push(currentEPct); errors.sort((a,b)=>a-b); }
+
+      const y = errors.map(ep => {
+        const e = ep/100;
+        return Math.ceil(N / (1 + N * e * e));
+      });
+
+      chartRef = new Chart(ctx, {
+        type:"line",
+        data:{
+          labels: errors.map(e=>`${e}%`),
+          datasets:[{
+            label:`Yamane: n vs e (N=${N})`,
+            data:y,
+            borderWidth:2,
+            fill:true,
+            tension:0.35,
+            pointRadius: errors.map(ep=> ep===currentEPct ? 7 : 3)
+          }]
+        },
+        options:{
+          responsive:true,
+          plugins:{ title:{ display:true, text:"Curva: amostra x margem de erro (Yamane)" } },
+          scales:{
+            x:{ title:{ display:true, text:"Margem de erro (%)" } },
+            y:{ title:{ display:true, text:"Tamanho da amostra (n)" }, beginAtZero:true }
+          }
+        }
+      });
+    }
+
+    function generateChartRecommended(N, conf, p, deff, lossPct, currentEPct, currentN){
+      const wrapper = document.getElementById("chart-wrapper");
+      wrapper.style.display = "block";
+      const ctx = document.getElementById("chart").getContext("2d");
+      if (chartRef) chartRef.destroy();
+
+      const z = zFromConfidence(conf);
+
+      let errors = [1,2,3,4,5,7,10];
+      if (!errors.includes(currentEPct)) { errors.push(currentEPct); errors.sort((a,b)=>a-b); }
+
+      const loss = lossPct/100;
+
+      const y = errors.map(ep => {
+        const e = ep/100;
+        const n0 = (z*z * p*(1-p)) / (e*e);
+        const nFpc = n0 / (1 + ((n0-1)/N));
+        return Math.ceil((nFpc * deff) / (1 - loss));
+      });
+
+      chartRef = new Chart(ctx, {
+        type:"line",
+        data:{
+          labels: errors.map(e=>`${e}%`),
+          datasets:[{
+            label:`Recomendado: n vs e (N=${N}, conf=${conf}%, p=${p})`,
+            data:y,
+            borderWidth:2,
+            fill:true,
+            tension:0.35,
+            pointRadius: errors.map(ep=> ep===currentEPct ? 7 : 3)
+          }]
+        },
+        options:{
+          responsive:true,
+          plugins:{ title:{ display:true, text:"Curva: amostra x margem de erro (modo recomendado)" } },
+          scales:{
+            x:{ title:{ display:true, text:"Margem de erro (%)" } },
+            y:{ title:{ display:true, text:"Tamanho da amostra (n ajustado)" }, beginAtZero:true }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
